@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  policies      Policy[]
+  conversations Conversation[]
+}
+
+model Policy {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  name             String
+  originalFilename String
+  storagePath      String
+  pageCount        Int            @default(0)
+  isScanned        Boolean        @default(false)
+  status           String         @default("processing")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  pages            PolicyPage[]
+  chunks           DocumentChunk[]
+}
+
+model PolicyPage {
+  id         String   @id @default(uuid())
+  policyId   String
+  policy     Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  pageNumber Int
+  text       String
+  createdAt  DateTime @default(now())
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  policyId   String
+  policy     Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  pageNumber Int
+  chunkIndex Int
+  text       String
+  chromaId   String   @unique
+  createdAt  DateTime @default(now())
+}
+
+
+model Conversation {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  title     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  questions Question[]
+}
+
+model Question {
+  id             String        @id @default(uuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  text           String
+  createdAt      DateTime      @default(now())
+  response       Response?
+}
+
+model Response {
+  id              String   @id @default(uuid())
+  questionId      String   @unique
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  finalAnswer     String
+  status          String?
+  confidenceScore Int
+  verified        Boolean
+  citations       Json
+  retrievedChunks Json
+  createdAt       DateTime @default(now())
+}
